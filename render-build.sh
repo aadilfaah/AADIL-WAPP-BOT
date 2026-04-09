@@ -4,19 +4,18 @@ set -o errexit
 STORAGE_DIR=/opt/render/project/.render
 mkdir -p $STORAGE_DIR
 
-if [[ ! -d $STORAGE_DIR/firefox ]]; then
-  echo "...Downloading Firefox"
+# লেটেস্ট ক্রোম এবং ড্রাইভার ডাউনলোড
+if [[ ! -d $STORAGE_DIR/chrome ]]; then
+  echo "...Downloading Chrome and ChromeDriver"
   cd $STORAGE_DIR
-  wget -q "https://download.mozilla.org/?product=firefox-latest-ssl&os=linux64&lang=en-US" -O firefox.tar.bz2
-  tar -xjf firefox.tar.bz2
-  rm firefox.tar.bz2
-fi
-
-if [[ ! -f $STORAGE_DIR/geckodriver ]]; then
-  echo "...Downloading GeckoDriver"
-  cd $STORAGE_DIR
-  wget -q https://github.com/mozilla/geckodriver/releases/download/v0.34.0/geckodriver-v0.34.0-linux64.tar.gz
-  tar -xzf geckodriver-v0.34.0-linux64.tar.gz
-  rm geckodriver-v0.34.0-linux64.tar.gz
-  chmod +x geckodriver
+  wget -q https://storage.googleapis.com/chrome-for-testing-public/123.0.6312.122/linux64/chrome-linux64.zip
+  unzip -q chrome-linux64.zip
+  mv chrome-linux64 chrome
+  
+  wget -q https://storage.googleapis.com/chrome-for-testing-public/123.0.6312.122/linux64/chromedriver-linux64.zip
+  unzip -q chromedriver-linux64.zip
+  mv chromedriver-linux64/chromedriver .
+  
+  rm chrome-linux64.zip chromedriver-linux64.zip
+  chmod +x $STORAGE_DIR/chromedriver
 fi
