@@ -2,23 +2,23 @@
 set -o errexit
 
 STORAGE_DIR=/opt/render/project/.render
-mkdir -p $STORAGE_DIR/chrome
+mkdir -p $STORAGE_DIR
 
-if [[ ! -d $STORAGE_DIR/chrome/opt/google/chrome ]]; then
-  echo "...Downloading Chrome 114"
+# লেটেস্ট ক্রোম এবং ড্রাইভার ডাউনলোড লজিক
+if [[ ! -d $STORAGE_DIR/chrome ]]; then
+  echo "...Downloading Chrome and ChromeDriver"
   cd $STORAGE_DIR
-  wget https://edgedl.me.gvt1.com/edgedl/chrome/chrome-for-testing/114.0.5735.90/linux64/chrome-linux64.zip
-  unzip chrome-linux64.zip
-  mv chrome-linux64/* chrome/
-  rm chrome-linux64.zip
-fi
-
-if [[ ! -f $STORAGE_DIR/chromedriver ]]; then
-  echo "...Downloading ChromeDriver 114"
-  cd $STORAGE_DIR
-  wget https://edgedl.me.gvt1.com/edgedl/chrome/chrome-for-testing/114.0.5735.90/linux64/chromedriver-linux64.zip
-  unzip chromedriver-linux64.zip
+  # লেটেস্ট ক্রোম ডাউনলোড (Linux 64)
+  wget -q https://storage.googleapis.com/chrome-for-testing-public/123.0.6312.122/linux64/chrome-linux64.zip
+  unzip -q chrome-linux64.zip
+  mv chrome-linux64 chrome
+  
+  # লেটেস্ট ড্রাইভার ডাউনলোড (Linux 64)
+  wget -q https://storage.googleapis.com/chrome-for-testing-public/123.0.6312.122/linux64/chromedriver-linux64.zip
+  unzip -q chromedriver-linux64.zip
   mv chromedriver-linux64/chromedriver .
-  rm chromedriver-linux64.zip
-  chmod +x chromedriver
+  
+  # ক্লিনআপ
+  rm chrome-linux64.zip chromedriver-linux64.zip
+  chmod +x $STORAGE_DIR/chromedriver
 fi
