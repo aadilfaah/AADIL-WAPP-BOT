@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>WhatsApp Auto Reply Admin</title>
+    <style>
+        body { font-family: Arial; margin: 20px; background: #f4f4f4; }
+        h1 { color: #128C7E; }
+        table { width: 100%; border-collapse: collapse; background: white; }
+        th, td { padding: 10px; border: 1px solid #ddd; text-align: left; }
+        form { margin: 20px 0; padding: 15px; background: white; }
+        input { padding: 8px; margin: 5px; width: 300px; }
+    </style>
+</head>
+<body>
+    <h1>📱 WhatsApp Auto Reply Bot - Admin Panel</h1>
+    
+    <form action="/add-rule" method="post">
+        <h3>নতুন রুল যোগ করুন</h3>
+        Keyword (কমা দিয়ে আলাদা): <input type="text" name="keyword" placeholder="hi, hello, হ্যালো" required><br>
+        Reply: <input type="text" name="reply" placeholder="আমি এখন ব্যস্ত..." required><br>
+        <button type="submit">Add Rule</button>
+    </form>
+
+    <h3>বর্তমান রুলস</h3>
+    <table>
+        <tr><th>ID</th><th>Keyword</th><th>Reply</th><th>Action</th></tr>
+        {% for rule in rules %}
+        <tr>
+            <td>{{ rule.id }}</td>
+            <td>{{ rule.keyword }}</td>
+            <td>{{ rule.reply }}</td>
+            <td>
+                <form action="/delete-rule" method="post" style="margin:0">
+                    <input type="hidden" name="rule_id" value="{{ rule.id }}">
+                    <button type="submit">Delete</button>
+                </form>
+            </td>
+        </tr>
+        {% endfor %}
+    </table>
+</body>
+</html>
