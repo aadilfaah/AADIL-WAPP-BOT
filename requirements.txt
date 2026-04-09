@@ -2,4 +2,5 @@ fastapi
 uvicorn[standard]
 jinja2
 python-multipart
-playwright
+selenium
+webdriver-manager
