@@ -5,12 +5,20 @@ STORAGE_DIR=/opt/render/project/.render
 mkdir -p $STORAGE_DIR/chrome
 
 if [[ ! -d $STORAGE_DIR/chrome/opt/google/chrome ]]; then
-  echo "...Downloading Chrome"
+  echo "...Downloading Chrome 114"
   cd $STORAGE_DIR
-  # লেটেস্ট স্ট্যাবল ক্রোম ডাউনলোড
-  wget https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb
-  dpkg -x google-chrome-stable_current_amd64.deb chrome/
-  rm google-chrome-stable_current_amd64.deb
+  wget https://edgedl.me.gvt1.com/edgedl/chrome/chrome-for-testing/114.0.5735.90/linux64/chrome-linux64.zip
+  unzip chrome-linux64.zip
+  mv chrome-linux64/* chrome/
+  rm chrome-linux64.zip
 fi
 
-export PATH=$PATH:$STORAGE_DIR/chrome/opt/google/chrome
+if [[ ! -f $STORAGE_DIR/chromedriver ]]; then
+  echo "...Downloading ChromeDriver 114"
+  cd $STORAGE_DIR
+  wget https://edgedl.me.gvt1.com/edgedl/chrome/chrome-for-testing/114.0.5735.90/linux64/chromedriver-linux64.zip
+  unzip chromedriver-linux64.zip
+  mv chromedriver-linux64/chromedriver .
+  rm chromedriver-linux64.zip
+  chmod +x chromedriver
+fi
