@@ -4,21 +4,16 @@ set -o errexit
 STORAGE_DIR=/opt/render/project/.render
 mkdir -p $STORAGE_DIR
 
-# লেটেস্ট ক্রোম এবং ড্রাইভার ডাউনলোড লজিক
 if [[ ! -d $STORAGE_DIR/chrome ]]; then
-  echo "...Downloading Chrome and ChromeDriver"
   cd $STORAGE_DIR
-  # লেটেস্ট ক্রোম ডাউনলোড (Linux 64)
   wget -q https://storage.googleapis.com/chrome-for-testing-public/123.0.6312.122/linux64/chrome-linux64.zip
   unzip -q chrome-linux64.zip
   mv chrome-linux64 chrome
   
-  # লেটেস্ট ড্রাইভার ডাউনলোড (Linux 64)
   wget -q https://storage.googleapis.com/chrome-for-testing-public/123.0.6312.122/linux64/chromedriver-linux64.zip
   unzip -q chromedriver-linux64.zip
   mv chromedriver-linux64/chromedriver .
   
-  # ক্লিনআপ
   rm chrome-linux64.zip chromedriver-linux64.zip
   chmod +x $STORAGE_DIR/chromedriver
 fi
