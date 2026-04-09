@@ -14,64 +14,62 @@ def load_rules():
 def get_reply(message: str):
     message = message.lower().strip()
     data = load_rules()
-    
     for rule in data["rules"]:
-        if rule["keyword"] == "default":
+        if rule.get("keyword") == "default":
             continue
         keywords = [k.strip() for k in rule["keyword"].split(",")]
         if any(k in message for k in keywords if k):
             return rule["reply"]
-    
-    # ডিফল্ট রিপ্লাই
     for rule in data["rules"]:
-        if rule["keyword"] == "default":
+        if rule.get("keyword") == "default":
             return rule["reply"]
-    return "আমি এখন ব্যস্ত আছি। পরে কথা বলবো।"
+    return "আমি এখন ব্যস্ত আছি। পরে কথা বলবো। 😊"
 
 def start_whatsapp_bot():
     with sync_playwright() as p:
+        # Render-এর জন্য extra args
         context = p.chromium.launch_persistent_context(
-            user_data_dir="sessions",
-            headless=False,
-            viewport={"width": 1200, "height": 800}
+            user_data_dir="./sessions",
+            headless=True,                    # Render-এ headless=True রাখো
+            viewport={"width": 800, "height": 600},
+            args=[
+                '--no-sandbox',
+                '--disable-setuid-sandbox',
+                '--disable-dev-shm-usage',
+                '--disable-gpu'
+            ]
         )
         
         page = context.pages[0] if context.pages else context.new_page()
         page.goto("https://web.whatsapp.com", wait_until="domcontentloaded")
         
-        print("✅ WhatsApp Web খুলছে... QR কোড স্ক্যান করুন (প্রথমবার)")
-        input("QR স্ক্যান হয়ে গেলে Enter চাপুন...")
-
-        print("🤖 বট চালু হয়েছে! অটো রিপ্লাই চলছে...")
+        print("✅ WhatsApp Web লোড হয়েছে। প্রথমবার QR স্ক্যান করতে হবে।")
+        # প্রথমবার ম্যানুয়ালি QR স্ক্যান করার জন্য অপেক্ষা
+        time.sleep(30)
+        
+        print("🤖 Auto Reply Bot চালু হয়েছে (Render-এ 24/7)")
 
         while True:
             try:
-                # আনরিড চ্যাট খুঁজে বের করা
-                unread = page.locator('div[role="listitem"] span[aria-label*="unread message"]').all()
-                
-                for chat in unread[:3]:  # একবারে সর্বোচ্চ ৩টা
+                unread_chats = page.locator('div[role="listitem"] span[aria-label*="unread"]').all()
+                for chat in unread_chats[:5]:
                     try:
                         chat.click()
-                        time.sleep(2)
+                        time.sleep(3)
                         
-                        # লাস্ট মেসেজ নেওয়া
                         messages = page.locator('div.message-in div.copyable-text').all()
                         if messages:
                             last_msg = messages[-1].inner_text().strip()
-                            
                             if last_msg:
                                 reply_text = get_reply(last_msg)
-                                # রিপ্লাই পাঠানো
                                 input_box = page.locator('div[role="textbox"][contenteditable="true"]')
                                 input_box.fill(reply_text)
                                 page.keyboard.press("Enter")
-                                print(f"✅ রিপ্লাই দেওয়া হয়েছে: {last_msg[:30]}...")
-                                
-                        time.sleep(1)
+                                print(f"✅ রিপ্লাই: {last_msg[:40]}...")
+                        time.sleep(1.5)
                     except:
                         continue
-                        
             except Exception as e:
                 print(f"Error: {e}")
             
-            time.sleep(4)
+            time.sleep(5)
