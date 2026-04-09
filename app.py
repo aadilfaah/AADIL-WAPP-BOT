@@ -13,11 +13,10 @@ app = Flask(__name__)
 DATA_FILE = 'replies.json'
 STATUS_FILE = 'status.json'
 
-# ফাইল চেক এবং তৈরি করা
 def init_files():
     if not os.path.exists(DATA_FILE):
         with open(DATA_FILE, 'w') as f:
-            json.dump({"hello": "Hi! How can I help?"}, f)
+            json.dump({"hello": "Hi!"}, f)
     if not os.path.exists(STATUS_FILE):
         with open(STATUS_FILE, 'w') as f:
             json.dump({"logged_in_user": "None", "status": "Offline"}, f)
@@ -43,23 +42,26 @@ HTML_TEMPLATE = '''
         body { font-family: 'Segoe UI', sans-serif; background: #fafafa; padding: 20px; }
         .container { max-width: 500px; margin: auto; }
         .card { background: white; padding: 20px; border-radius: 10px; border: 1px solid #ddd; margin-bottom: 20px; }
+        .status-box { font-size: 15px; padding: 10px; border-radius: 5px; background: #f0f0f0; border-left: 5px solid #0095f6; }
+        .error-msg { color: #d9534f; font-weight: bold; }
         input { width: 100%; padding: 10px; margin: 8px 0; border: 1px solid #ddd; border-radius: 5px; box-sizing: border-box; }
         button { width: 100%; padding: 12px; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; }
         .btn-login { background: #0095f6; color: white; }
         .btn-save { background: #28a745; color: white; }
-        .status-box { font-size: 14px; color: #555; }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="card">
-            <h2>Bot Status</h2>
-            <p class="status-box">User: <strong>{{ status['logged_in_user'] }}</strong></p>
-            <p class="status-box">Status: <strong>{{ status['status'] }}</strong></p>
+            <h2>System Status</h2>
+            <div class="status-box">
+                <p>User: <strong>{{ status['logged_in_user'] }}</strong></p>
+                <p>Status: <span class="{% if 'Error' in status['status'] %}error-msg{% endif %}">{{ status['status'] }}</span></p>
+            </div>
         </div>
 
         <div class="card">
-            <h3>Login Instagram</h3>
+            <h3>Login to Instagram</h3>
             <form action="/login" method="post">
                 <input type="text" name="user" placeholder="Username" required>
                 <input type="password" name="pass" placeholder="Password" required>
@@ -74,7 +76,7 @@ HTML_TEMPLATE = '''
                 <input type="text" name="val" placeholder="Reply with..." required>
                 <button type="submit" class="btn-save">Add Rule</button>
             </form>
-            <h4>Rules:</h4>
+            <h4>Current Rules:</h4>
             <ul>
                 {% for k, v in replies.items() %}
                 <li><strong>{{ k }}</strong> : {{ v }}</li>
@@ -106,10 +108,9 @@ def add():
     save_json(DATA_FILE, data)
     return redirect('/')
 
-# --- মেইন বট প্রসেস (লগস সহ) ---
 def bot_process(user, pw):
     st = get_json(STATUS_FILE)
-    print(f"\n[INFO] Starting bot for: {user}")
+    print(f"[INFO] Bot started for: {user}")
     st['status'] = "Initializing Browser..."
     save_json(STATUS_FILE, st)
 
@@ -118,44 +119,56 @@ def bot_process(user, pw):
     options.add_argument("--no-sandbox")
     options.add_argument("--disable-dev-shm-usage")
     
-    driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
-    
+    # Render-এ ক্রোম বাইনারি পাথ সেট করা (আপনার এরর ঠিক করার জন্য)
+    chrome_bin = "/opt/render/project/.render/chrome/opt/google/chrome/google-chrome"
+    if os.path.exists(chrome_bin):
+        options.binary_location = chrome_bin
+
     try:
-        print("[INFO] Navigating to Instagram Login...")
+        driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
+        
+        print("[INFO] Loading Instagram...")
         driver.get("https://www.instagram.com/accounts/login/")
         time.sleep(10)
         
-        print("[INFO] Entering Username and Password...")
+        print("[INFO] Submitting credentials...")
         driver.find_element(By.NAME, "username").send_keys(user)
         driver.find_element(By.NAME, "password").send_keys(pw)
         driver.find_element(By.XPATH, "//button[@type='submit']").click()
         
-        print("[INFO] Waiting for login response (15s)...")
         time.sleep(15)
         
-        # লগইন চেক
-        if "login" in driver.current_url.lower():
-            print("[ERROR] Login failed. Possibly 2FA or wrong password.")
-            st['status'] = "Login Failed (Check Phone/2FA)"
+        # লগইন এরর চেক লজিক
+        current_url = driver.current_url.lower()
+        if "login" in current_url:
+            # চেক করা হচ্ছে কোনো এরর মেসেজ দেখা যাচ্ছে কি না
+            try:
+                error_element = driver.find_element(By.ID, "slfErrorAlert")
+                error_text = error_element.text
+                st['status'] = f"Error: {error_text}"
+            except:
+                st['status'] = "Error: Checkpoint/2FA Required"
+            
+            print(f"[FAILED] {st['status']}")
         else:
-            print("[SUCCESS] Logged in successfully!")
+            print("[SUCCESS] Logged in!")
             st['logged_in_user'] = user
             st['status'] = "Active & Checking Messages"
             
         save_json(STATUS_FILE, st)
 
         while True:
-            # এখানে মেসেজ চেক করার লজিক দেওয়া যায়
-            print(f"[HEARTBEAT] Bot is alive for {user}...")
-            time.sleep(120) # প্রতি ২ মিনিটে একবার লগ দেখাবে
+            # বটের রিপ্লাই লজিক এখানে চলবে
+            time.sleep(120)
             
     except Exception as e:
-        print(f"[CRITICAL] Error occurred: {str(e)}")
-        st['status'] = "Crashed: Check Logs"
+        err_msg = str(e)[:50] # প্রথম ৫০ অক্ষর দেখাবে
+        print(f"[CRITICAL] {err_msg}")
+        st['status'] = f"System Error: {err_msg}"
         save_json(STATUS_FILE, st)
     finally:
-        driver.quit()
-        print("[INFO] Browser session closed.")
+        try: driver.quit()
+        except: pass
 
 if __name__ == "__main__":
     app.run(host='0.0.0.0', port=os.environ.get('PORT', 5000))
