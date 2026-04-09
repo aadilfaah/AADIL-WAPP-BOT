@@ -12,7 +12,7 @@ app = Flask(__name__)
 DATA_FILE = 'replies.json'
 STATUS_FILE = 'status.json'
 
-# ফাইল ম্যানেজমেন্ট
+# ফাইল এবং ডাটা ইনিশিয়ালাইজেশন
 def init_files():
     if not os.path.exists(DATA_FILE):
         with open(DATA_FILE, 'w') as f:
@@ -34,7 +34,7 @@ def save_json(filename, data):
     with open(filename, 'w') as f:
         json.dump(data, f)
 
-# অ্যাডমিন প্যানেল ডিজাইন
+# অ্যাডমিন প্যানেল ইন্টারফেস
 HTML_TEMPLATE = '''
 <!DOCTYPE html>
 <html>
@@ -42,26 +42,29 @@ HTML_TEMPLATE = '''
     <title>InstaBot Admin</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <style>
-        body { font-family: 'Segoe UI', sans-serif; background: #f0f2f5; padding: 20px; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f0f2f5; margin: 0; padding: 20px; }
         .container { max-width: 500px; margin: auto; }
-        .card { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); margin-bottom: 20px; }
-        .status-box { padding: 15px; border-radius: 8px; background: #f8f9fa; border-left: 6px solid #0095f6; }
-        .error { color: #dc3545; font-weight: bold; }
-        input { width: 100%; padding: 12px; margin: 10px 0; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box; }
-        button { width: 100%; padding: 12px; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; }
-        .btn-blue { background: #0095f6; color: white; }
-        .btn-green { background: #42b72a; color: white; margin-top: 10px; }
+        .card { background: white; padding: 25px; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.08); margin-bottom: 20px; border: 1px solid #e0e0e0; }
+        h2 { color: #1c1e21; margin-top: 0; }
+        .status-box { padding: 15px; border-radius: 10px; background: #f8f9fa; border-left: 6px solid #0095f6; margin-bottom: 10px; }
+        .error-text { color: #d93025; font-weight: bold; }
+        input { width: 100%; padding: 12px; margin: 10px 0; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; font-size: 14px; }
+        button { width: 100%; padding: 12px; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 16px; transition: 0.3s; }
+        .btn-login { background: #0095f6; color: white; }
+        .btn-login:hover { background: #1877f2; }
+        .btn-save { background: #42b72a; color: white; }
+        .btn-save:hover { background: #36a420; }
         ul { list-style: none; padding: 0; }
-        li { background: #f1f3f4; padding: 10px; margin-top: 5px; border-radius: 6px; }
+        li { background: #f1f3f4; padding: 12px; margin-top: 8px; border-radius: 8px; font-size: 14px; border: 1px solid #eee; }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="card">
-            <h2>System Status</h2>
+            <h2>Bot Status</h2>
             <div class="status-box">
-                <p><strong>User:</strong> {{ status['logged_in_user'] }}</p>
-                <p><strong>Status:</strong> <span class="{% if 'Error' in status['status'] %}error{% endif %}">{{ status['status'] }}</span></p>
+                <p><strong>Active User:</strong> {{ status['logged_in_user'] }}</p>
+                <p><strong>System Status:</strong> <span class="{% if 'Error' in status['status'] %}error-text{% endif %}">{{ status['status'] }}</span></p>
             </div>
         </div>
 
@@ -70,21 +73,21 @@ HTML_TEMPLATE = '''
             <form action="/login" method="post">
                 <input type="text" name="user" placeholder="Instagram Username" required>
                 <input type="password" name="pass" placeholder="Instagram Password" required>
-                <button type="submit" class="btn-blue">Start Bot Session</button>
+                <button type="submit" class="btn-login">Login & Start Bot</button>
             </form>
         </div>
 
         <div class="card">
-            <h3>Training & Rules</h3>
+            <h3>Auto-Reply Training</h3>
             <form action="/add" method="post">
-                <input type="text" name="key" placeholder="Keyword" required>
-                <input type="text" name="val" placeholder="Reply" required>
-                <button type="submit" class="btn-green">Save Rule</button>
+                <input type="text" name="key" placeholder="Keyword (lowercase)" required>
+                <input type="text" name="val" placeholder="Bot Reply" required>
+                <button type="submit" class="btn-save">Save Rule</button>
             </form>
-            <h4>Rules List:</h4>
+            <h4>Current Rules:</h4>
             <ul>
                 {% for k, v in replies.items() %}
-                <li><strong>{{ k }}</strong>: {{ v }}</li>
+                <li><strong>{{ k }}</strong> : {{ v }}</li>
                 {% endfor %}
             </ul>
         </div>
@@ -113,10 +116,10 @@ def add():
     save_json(DATA_FILE, data)
     return redirect('/')
 
-# --- অটোমেশন ইঞ্জিন ---
+# --- মেইন অটোমেশন লজিক ---
 def bot_process(user, pw):
     st = get_json(STATUS_FILE)
-    print(f"\n[INFO] Starting bot for: {user}")
+    print(f"\n[INFO] Initializing Bot Process for: {user}")
     st['status'] = "Initializing Browser..."
     save_json(STATUS_FILE, st)
 
@@ -124,57 +127,62 @@ def bot_process(user, pw):
     options.add_argument("--headless")
     options.add_argument("--no-sandbox")
     options.add_argument("--disable-dev-shm-usage")
+    options.add_argument("--window-size=1920,1080")
     
-    # Render-এ ডাউনলোড করা ক্রোম এবং ড্রাইভার পাথ
+    # Render-এ লেটেস্ট ক্রোম এবং ড্রাইভার পাথ (render-build.sh অনুযায়ী)
     chrome_path = "/opt/render/project/.render/chrome/chrome"
     driver_path = "/opt/render/project/.render/chromedriver"
     
     if os.path.exists(chrome_path):
         options.binary_location = chrome_path
-        print("[INFO] Manual Chrome binary set.")
+        print("[INFO] Custom Chrome binary found.")
 
     try:
-        # সরাসরি পাথ দিয়ে সার্ভিস চালু করা (ভার্সন সমস্যা এড়াতে)
         service = Service(executable_path=driver_path)
         driver = webdriver.Chrome(service=service, options=options)
         
-        print("[INFO] Loading Instagram Login...")
+        print("[INFO] Navigating to Instagram...")
         driver.get("https://www.instagram.com/accounts/login/")
-        time.sleep(10)
+        time.sleep(12)
         
+        print("[INFO] Submitting login form...")
         driver.find_element(By.NAME, "username").send_keys(user)
         driver.find_element(By.NAME, "password").send_keys(pw)
         driver.find_element(By.XPATH, "//button[@type='submit']").click()
         
-        print("[INFO] Authenticating...")
+        print("[INFO] Authentication in progress...")
         time.sleep(15)
         
+        # লগইন স্ট্যাটাস ভেরিফিকেশন
         if "login" in driver.current_url.lower():
             try:
-                err = driver.find_element(By.ID, "slfErrorAlert").text
-                st['status'] = f"Login Error: {err}"
+                err_msg = driver.find_element(By.ID, "slfErrorAlert").text
+                st['status'] = f"Error: {err_msg}"
             except:
-                st['status'] = "Error: 2FA or Security Check needed"
+                st['status'] = "Error: Checkpoint or 2FA required"
+            print(f"[FAILED] Login unsuccessful. Reason: {st['status']}")
         else:
-            print("[SUCCESS] Bot is online!")
+            print("[SUCCESS] Logged in and Bot is Live!")
             st['logged_in_user'] = user
-            st['status'] = "Active & Running"
-        
+            st['status'] = "Active & Auto-replying"
+            
         save_json(STATUS_FILE, st)
 
         while True:
-            # বট সেশন বজায় রাখা
-            print(f"[ALIVE] {user} is active.")
-            time.sleep(180)
+            # সেশন সচল রাখতে হার্টবিট প্রিন্ট
+            print(f"[HEARTBEAT] {user} session is healthy.")
+            time.sleep(180) 
             
     except Exception as e:
-        error_msg = str(e).split('\n')[0]
-        print(f"[CRITICAL] {error_msg}")
-        st['status'] = f"System Error: {error_msg}"
+        full_err = str(e).split('\n')[0]
+        print(f"[CRITICAL] System Error: {full_err}")
+        st['status'] = f"System Error: {full_err[:50]}"
         save_json(STATUS_FILE, st)
     finally:
-        try: driver.quit()
-        except: pass
+        try:
+            driver.quit()
+        except:
+            pass
 
 if __name__ == "__main__":
     app.run(host='0.0.0.0', port=os.environ.get('PORT', 5000))
