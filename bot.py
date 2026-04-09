@@ -1,7 +1,10 @@
 import json
 import os
 import time
-from playwright.sync_api import sync_playwright
+from selenium import webdriver
+from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.chrome.service import Service
+from webdriver_manager.chrome import ChromeDriverManager
 
 DATA_FILE = "rules.json"
 
@@ -14,62 +17,57 @@ def load_rules():
 def get_reply(message: str):
     message = message.lower().strip()
     data = load_rules()
-    for rule in data["rules"]:
+    for rule in data.get("rules", []):
         if rule.get("keyword") == "default":
             continue
         keywords = [k.strip() for k in rule["keyword"].split(",")]
         if any(k in message for k in keywords if k):
             return rule["reply"]
-    for rule in data["rules"]:
+    for rule in data.get("rules", []):
         if rule.get("keyword") == "default":
             return rule["reply"]
     return "আমি এখন ব্যস্ত আছি। পরে কথা বলবো। 😊"
 
 def start_whatsapp_bot():
-    with sync_playwright() as p:
-        # Render-এর জন্য extra args
-        context = p.chromium.launch_persistent_context(
-            user_data_dir="./sessions",
-            headless=True,                    # Render-এ headless=True রাখো
-            viewport={"width": 800, "height": 600},
-            args=[
-                '--no-sandbox',
-                '--disable-setuid-sandbox',
-                '--disable-dev-shm-usage',
-                '--disable-gpu'
-            ]
-        )
-        
-        page = context.pages[0] if context.pages else context.new_page()
-        page.goto("https://web.whatsapp.com", wait_until="domcontentloaded")
-        
-        print("✅ WhatsApp Web লোড হয়েছে। প্রথমবার QR স্ক্যান করতে হবে।")
-        # প্রথমবার ম্যানুয়ালি QR স্ক্যান করার জন্য অপেক্ষা
-        time.sleep(30)
-        
-        print("🤖 Auto Reply Bot চালু হয়েছে (Render-এ 24/7)")
+    chrome_options = Options()
+    chrome_options.add_argument("--headless")
+    chrome_options.add_argument("--no-sandbox")
+    chrome_options.add_argument("--disable-dev-shm-usage")
+    chrome_options.add_argument("--disable-gpu")
+    chrome_options.add_argument("--window-size=800,600")
+    chrome_options.add_argument("--user-data-dir=./sessions")
 
-        while True:
-            try:
-                unread_chats = page.locator('div[role="listitem"] span[aria-label*="unread"]').all()
-                for chat in unread_chats[:5]:
-                    try:
-                        chat.click()
-                        time.sleep(3)
-                        
-                        messages = page.locator('div.message-in div.copyable-text').all()
-                        if messages:
-                            last_msg = messages[-1].inner_text().strip()
-                            if last_msg:
-                                reply_text = get_reply(last_msg)
-                                input_box = page.locator('div[role="textbox"][contenteditable="true"]')
-                                input_box.fill(reply_text)
-                                page.keyboard.press("Enter")
-                                print(f"✅ রিপ্লাই: {last_msg[:40]}...")
-                        time.sleep(1.5)
-                    except:
-                        continue
-            except Exception as e:
-                print(f"Error: {e}")
+    driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=chrome_options)
+    
+    driver.get("https://web.whatsapp.com")
+    print("✅ WhatsApp Web খুলছে... প্রথমবার QR স্ক্যান করুন")
+    time.sleep(25)   # QR স্ক্যানের জন্য সময়
+
+    print("🤖 বট চালু হয়েছে!")
+
+    while True:
+        try:
+            # আনরিড চ্যাট খোঁজা (Selenium XPath)
+            unread_chats = driver.find_elements("xpath", '//div[contains(@class, "message-in")]//span[contains(@aria-label, "unread")]')
             
-            time.sleep(5)
+            for chat in unread_chats[:3]:
+                try:
+                    chat.click()
+                    time.sleep(3)
+                    
+                    messages = driver.find_elements("xpath", '//div[contains(@class, "message-in")]//div[contains(@class, "copyable-text")]')
+                    if messages:
+                        last_msg = messages[-1].text.strip()
+                        if last_msg:
+                            reply_text = get_reply(last_msg)
+                            input_box = driver.find_element("xpath", '//div[@contenteditable="true" and @role="textbox"]')
+                            input_box.send_keys(reply_text)
+                            time.sleep(1)
+                            input_box.send_keys("\n")   # Enter
+                            print(f"✅ রিপ্লাই পাঠানো হয়েছে")
+                except:
+                    continue
+        except Exception as e:
+            print(f"Error: {e}")
+        
+        time.sleep(5)
