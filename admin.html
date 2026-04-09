@@ -2,28 +2,56 @@
 <html>
 <head>
     <meta charset="UTF-8">
-    <title>WhatsApp Auto Reply Admin</title>
+    <title>WhatsApp Auto Reply Bot</title>
     <style>
-        body { font-family: Arial; margin: 20px; background: #f4f4f4; }
-        h1 { color: #128C7E; }
-        table { width: 100%; border-collapse: collapse; background: white; }
-        th, td { padding: 10px; border: 1px solid #ddd; text-align: left; }
-        form { margin: 20px 0; padding: 15px; background: white; }
-        input { padding: 8px; margin: 5px; width: 300px; }
+        body { font-family: Arial, sans-serif; background: #f0f2f5; margin: 20px; }
+        .container { max-width: 900px; margin: auto; background: white; padding: 25px; border-radius: 12px; box-shadow: 0 0 15px rgba(0,0,0,0.1); }
+        .code-box { 
+            font-size: 42px; 
+            letter-spacing: 12px; 
+            font-weight: bold; 
+            color: #128C7E; 
+            background: #f8f8f8; 
+            padding: 25px; 
+            text-align: center; 
+            border-radius: 10px; 
+            margin: 20px 0;
+            border: 3px solid #128C7E;
+        }
+        input { padding: 10px; margin: 8px 0; width: 80%; }
+        button { padding: 10px 20px; background: #128C7E; color: white; border: none; border-radius: 5px; cursor: pointer; }
     </style>
 </head>
 <body>
+<div class="container">
     <h1>📱 WhatsApp Auto Reply Bot - Admin Panel</h1>
     
+    <h2>Pairing Code</h2>
+    <div class="code-box">
+        {{ status.pairing_code if status.pairing_code else "Loading..." }}
+    </div>
+    
+    <p><strong>লগইন করার নিয়ম:</strong></p>
+    <ol>
+        <li>আপনার মোবাইলের WhatsApp খুলুন</li>
+        <li>Settings → Linked Devices → <b>Link a Device</b></li>
+        <li><b>"Link with phone number"</b> এ ক্লিক করুন</li>
+        <li>উপরের ৮ ডিজিটের কোডটি দিন</li>
+    </ol>
+
+    <hr>
+
+    <h3>নতুন রুল যোগ করুন</h3>
     <form action="/add-rule" method="post">
-        <h3>নতুন রুল যোগ করুন</h3>
-        Keyword (কমা দিয়ে আলাদা): <input type="text" name="keyword" placeholder="hi, hello, হ্যালো" required><br>
-        Reply: <input type="text" name="reply" placeholder="আমি এখন ব্যস্ত..." required><br>
+        Keyword (কমা দিয়ে): <br>
+        <input type="text" name="keyword" placeholder="hi, hello, হ্যালো, আসসালামু" required><br><br>
+        Reply Text: <br>
+        <input type="text" name="reply" placeholder="ওয়ালাইকুম আসসালাম! কেমন আছেন?" required><br><br>
         <button type="submit">Add Rule</button>
     </form>
 
     <h3>বর্তমান রুলস</h3>
-    <table>
+    <table border="1" cellpadding="10" style="width:100%; border-collapse: collapse;">
         <tr><th>ID</th><th>Keyword</th><th>Reply</th><th>Action</th></tr>
         {% for rule in rules %}
         <tr>
@@ -33,11 +61,12 @@
             <td>
                 <form action="/delete-rule" method="post" style="margin:0">
                     <input type="hidden" name="rule_id" value="{{ rule.id }}">
-                    <button type="submit">Delete</button>
+                    <button type="submit" style="background:red">Delete</button>
                 </form>
             </td>
         </tr>
         {% endfor %}
     </table>
+</div>
 </body>
 </html>
