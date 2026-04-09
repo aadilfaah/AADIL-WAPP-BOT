@@ -1,21 +1,9 @@
 #!/usr/bin/env bash
 set -o errexit
 
-STORAGE_DIR=/opt/render/project/.render
-mkdir -p $STORAGE_DIR
-
-# লেটেস্ট ক্রোম এবং ড্রাইভার ডাউনলোড
-if [[ ! -d $STORAGE_DIR/chrome ]]; then
-  echo "...Downloading Chrome and ChromeDriver"
-  cd $STORAGE_DIR
-  wget -q https://storage.googleapis.com/chrome-for-testing-public/123.0.6312.122/linux64/chrome-linux64.zip
-  unzip -q chrome-linux64.zip
-  mv chrome-linux64 chrome
-  
-  wget -q https://storage.googleapis.com/chrome-for-testing-public/123.0.6312.122/linux64/chromedriver-linux64.zip
-  unzip -q chromedriver-linux64.zip
-  mv chromedriver-linux64/chromedriver .
-  
-  rm chrome-linux64.zip chromedriver-linux64.zip
-  chmod +x $STORAGE_DIR/chromedriver
-fi
+# Install Google Chrome
+echo "...Installing Google Chrome"
+wget -q -O - https://dl.google.com/linux/linux_signing_key.pub | apt-key add -
+sh -c 'echo "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main" >> /etc/apt/sources.list.d/google-chrome.list'
+apt-get update
+apt-get install -y google-chrome-stable
