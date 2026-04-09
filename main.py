@@ -4,35 +4,36 @@ from fastapi.templating import Jinja2Templates
 import uvicorn
 import threading
 import os
-from bot import start_whatsapp_bot, load_rules
+from bot import start_whatsapp, get_status, load_rules
 
 app = FastAPI()
 templates = Jinja2Templates(directory="templates")
 
-# বট চালানো
 @app.on_event("startup")
 async def startup_event():
-    thread = threading.Thread(target=start_whatsapp_bot, daemon=True)
+    thread = threading.Thread(target=start_whatsapp, daemon=True)
     thread.start()
 
 @app.get("/", response_class=HTMLResponse)
 async def admin_panel(request: Request):
-    data = load_rules()
-    return templates.TemplateResponse("admin.html", {"request": request, "rules": data.get("rules", [])})
+    status = get_status()
+    rules = load_rules().get("rules", [])
+    return templates.TemplateResponse("admin.html", {
+        "request": request,
+        "status": status,
+        "rules": rules
+    })
 
-# Add & Delete route আগের মতোই রাখো...
 @app.post("/add-rule")
 async def add_rule(keyword: str = Form(...), reply: str = Form(...)):
-    # আগের কোড অনুসারে যোগ করো
     data = load_rules()
-    new_id = len(data.get("rules", [])) + 1
     if "rules" not in data:
         data["rules"] = []
+    new_id = len(data["rules"]) + 1
     data["rules"].append({
         "id": new_id,
         "keyword": keyword.lower(),
-        "reply": reply,
-        "is_ai": False
+        "reply": reply
     })
     with open("rules.json", "w", encoding="utf-8") as f:
         json.dump(data, f, ensure_ascii=False, indent=2)
